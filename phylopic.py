@@ -9,20 +9,24 @@ import sys
 name_search_url = 'http://phylopic.org/api/a/name/search?text=%s&options=icon'
 # find images associated with a name id
 image_search_url = 'http://phylopic.org/api/a/name/%s/images?subtaxa=true'
-# thumbnail image from image id
-thumbnail_url = 'http://phylopic.org/assets/images/submissions/%s.thumb.png'
+# image from image id
+image_urls = {
+    'thumb.png':  'http://phylopic.org/assets/images/submissions/%s.thumb.png',
+    'svg':        'http://phylopic.org/assets/images/submissions/%s.svg'
+    }
 
 def download_pics(*taxa, **kwargs):
     path = kwargs.get('path', '.')
     name = kwargs.get('name', None)
     max_images = kwargs.get('max_images', 3)
+    img_format = kwargs.get('img_format', 'svg')
 
     for taxon in taxa:
-        image_path = os.path.join(path, '%s.png' % taxon)
+        image_path = os.path.join(path, '%s.%s' % (taxon, img_format))
         if os.path.exists(image_path): continue
         print 'Downloading pic for %s...' % taxon,
         sys.stdout.flush()
-        url = image_url(taxon, max_images=max_images)
+        url = image_url(taxon, max_images=max_images, img_format=img_format)
         request = urllib2.urlopen(url)
         with open(image_path, 'wb') as image_file:
             while True:
@@ -31,9 +35,9 @@ def download_pics(*taxa, **kwargs):
                 image_file.write(data)
         print 'done!'
 
-def image_url(taxon, max_images=1):
+def image_url(taxon, max_images=1, img_format='svg'):
     thumbnail_counts = {}
-    for thumbnail in get_thumbnails(pic_search(taxon)):
+    for thumbnail in get_image_urls(pic_search(taxon), img_format=img_format):
         if not thumbnail in thumbnail_counts:
             thumbnail_counts[thumbnail] = 0
         thumbnail_counts[thumbnail] += 1
@@ -59,7 +63,8 @@ def pic_search(taxon):
         if result: result = result.get('uid', None)
         if result: yield result
 
-def get_thumbnails(image_ids):
+def get_image_urls(image_ids, img_format='svg'):
+    thumbnail_url = image_urls[img_format]
     for image_id in image_ids:
         yield thumbnail_url % image_id
 
